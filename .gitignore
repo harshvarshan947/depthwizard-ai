@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Temporary data, large OBJ meshes & uploaded user images
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/outputs/*
+!backend/outputs/.gitkeep
+backend/models/*
+!backend/models/.gitkeep
+
+# Exclude cloudflared executable from git
+cloudflared.exe
+
+# Build directories
+frontend/dist/
+dist/
+build/
+
+# Vite / IDE / OS temporary files
+.vite/
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
