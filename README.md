@@ -3,8 +3,8 @@ title: DepthWizard AI
 emoji: 🛰️
 colorFrom: blue
 colorTo: cyan
-sdk: docker
-app_port: 7860
+sdk: gradio
+app_file: app.py
 pinned: false
 license: mit
 short_description: Single-View Height Estimation & 3D Flythrough for Geospatial Intelligence

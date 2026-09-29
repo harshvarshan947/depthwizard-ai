@@ -26,7 +26,6 @@ backend/models/*
 cloudflared.exe
 
 # Build directories
-frontend/dist/
 dist/
 build/
 
