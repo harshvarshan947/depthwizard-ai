@@ -1,12 +1,13 @@
 services:
   - type: web
     name: depthwizard-ai
-    runtime: docker
-    dockerfilePath: Dockerfile
+    env: python
     plan: free
     region: oregon
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python app.py"
     envVars:
-      - key: PORT
-        value: 10000
+      - key: PYTHON_VERSION
+        value: 3.11.8
       - key: PYTHONUNBUFFERED
-        value: 1
+        value: "1"
