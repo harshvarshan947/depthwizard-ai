@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { PipelineResult, SystemHealth, CalibrationParams, MeasurementPoint, ObjectItem } from '../types';
 import { api } from '../services/api';
+import { getDemoFallbackResult } from '../services/demo_fallback';
 
 interface AppContextType {
   activeTab: string;
@@ -154,20 +155,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setPipelineProgress(95);
     setPipelineStatusText('STEP 06: Generating Volumetric 3D Height-Field Mesh & Point Cloud...');
     
-    // Call backend pipeline
-    const res = await api.runPipeline({
-      image_id: imageId,
-      contrast: depthContrast,
-      scale: depthScale,
-      invert: invertDepth,
-      colormap: selectedColormap,
-      use_ai: true,
-      is_calibrated: calibration.is_calibrated,
-      camera_altitude_m: calibration.camera_altitude_m,
-      ground_sampling_distance_cm: calibration.ground_sampling_distance_cm,
-      reference_height_m: calibration.reference_height_m,
-      exaggeration: heightExaggeration
-    });
+    // Call backend pipeline with automatic demo preset fallback
+    let res: PipelineResult;
+    try {
+      res = await api.runPipeline({
+        image_id: imageId,
+        contrast: depthContrast,
+        scale: depthScale,
+        invert: invertDepth,
+        colormap: selectedColormap,
+        use_ai: true,
+        is_calibrated: calibration.is_calibrated,
+        camera_altitude_m: calibration.camera_altitude_m,
+        ground_sampling_distance_cm: calibration.ground_sampling_distance_cm,
+        reference_height_m: calibration.reference_height_m,
+        exaggeration: heightExaggeration
+      });
+    } catch (apiErr: any) {
+      if (imageId.startsWith('demo_')) {
+        console.warn('[DepthWizard] Backend response delayed or waking up. Using standalone benchmark preset:', apiErr);
+        res = getDemoFallbackResult(imageId);
+      } else {
+        throw apiErr;
+      }
+    }
 
     setPipelineStep(7);
     setPipelineProgress(100);
