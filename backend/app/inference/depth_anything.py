@@ -101,6 +101,10 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                 else:
                     depth_norm = depth_arr
 
+                # Hugging Face Depth Anything pipeline outputs distance from camera (near=0, far=1).
+                # In aerial/overhead imaging, closer to camera = higher elevation above ground datum.
+                # Convert distance to elevation/disparity (tallest structures=1.0, ground plane=0.0).
+                depth_norm = 1.0 - depth_norm
                 depth_norm = np.clip(depth_norm, 0.0, 1.0)
                 elapsed = round((time.time() - start_time) * 1000, 1)
 

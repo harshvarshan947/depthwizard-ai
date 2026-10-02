@@ -25,6 +25,7 @@ export const TerrainMesh: React.FC<TerrainMeshProps> = ({
     currentResult,
     meshDisplayMode,
     heightExaggeration,
+    invertDepth,
     selectedObjectId,
     setSelectedObjectId,
     measurementMode,
@@ -138,7 +139,9 @@ export const TerrainMesh: React.FC<TerrainMeshProps> = ({
 
     // PlaneGeometry vertices are oriented in XY plane; Z is the normal (which becomes world +Y when rotated)
     for (let i = 0; i < len; i++) {
-      posArray[i * 3 + 2] = heightData.elevations[i] * baseHeightScale;
+      const rawElev = heightData.elevations[i];
+      const elev = invertDepth ? (1.0 - rawElev) : rawElev;
+      posArray[i * 3 + 2] = elev * baseHeightScale;
     }
 
     pos.needsUpdate = true;
@@ -155,13 +158,15 @@ export const TerrainMesh: React.FC<TerrainMeshProps> = ({
       if (wGeom && wGeom.attributes.position) {
         const wPosArray = wGeom.attributes.position.array as Float32Array;
         for (let i = 0; i < len; i++) {
-          wPosArray[i * 3 + 2] = heightData.elevations[i] * baseHeightScale + 0.05;
+          const rawElev = heightData.elevations[i];
+          const elev = invertDepth ? (1.0 - rawElev) : rawElev;
+          wPosArray[i * 3 + 2] = elev * baseHeightScale + 0.05;
         }
         wGeom.attributes.position.needsUpdate = true;
         wGeom.computeVertexNormals();
       }
     }
-  }, [heightData, heightExaggeration]);
+  }, [heightData, heightExaggeration, invertDepth]);
 
   // Handle pointer down for measurement tool or point clicking
   const handlePointerDown = (e: any) => {

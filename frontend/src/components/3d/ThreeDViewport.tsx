@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { 
   Compass, Maximize2, Minimize2, RotateCcw, Crosshair, 
   Eye, Zap, Layers, Navigation, Move, HelpCircle, X,
-  Play, Pause, Grid3X3, Camera, Sliders, ShieldCheck, Gauge, Plane
+  Play, Pause, Grid3X3, Camera, Sliders, ShieldCheck, Gauge, Plane,
+  ArrowUpDown
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { TerrainMesh } from './TerrainMesh';
@@ -23,6 +24,8 @@ export const ThreeDViewport: React.FC = () => {
     setMeshDisplayMode,
     heightExaggeration,
     setHeightExaggeration,
+    invertDepth,
+    setInvertDepth,
     measurementMode,
     setMeasurementMode,
     measurementPoints,
@@ -660,6 +663,22 @@ export const ThreeDViewport: React.FC = () => {
           >
             <Grid3X3 className="w-3 h-3" />
             <span className="hidden sm:inline">Grid Overlay</span>
+          </button>
+
+          <div className="h-4 w-px bg-slate-700 mx-1" />
+
+          {/* Invert Elevation / Flip Heights Toggle */}
+          <button
+            onClick={() => setInvertDepth(!invertDepth)}
+            title="Invert Elevation Polarity (Flip Rooftops / Terrain Heights)"
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded text-xs font-mono transition ${
+              invertDepth
+                ? 'bg-amber-500/30 text-amber-300 border border-amber-400/50 shadow-glow-amber'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <ArrowUpDown className="w-3 h-3" />
+            <span>{invertDepth ? 'Heights Flipped' : 'Flip Height'}</span>
           </button>
         </div>
 
