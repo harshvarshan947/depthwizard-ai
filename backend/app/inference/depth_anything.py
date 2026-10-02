@@ -19,6 +19,7 @@ def get_depth_pipeline():
         _MODEL_LOAD_ATTEMPTED = True
         try:
             import torch
+            torch.set_num_threads(1)
             from transformers import pipeline
             device = 0 if torch.cuda.is_available() else -1
             print(f"[DepthWizard AI] Loading Depth Anything V2 model on device: {device}...")
@@ -77,14 +78,19 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
         pipe = get_depth_pipeline()
         if pipe is not None:
             try:
-                # Pre-scale if image is gigantic to keep inference responsive on CPU
-                inference_img = image
-                if max(orig_w, orig_h) > 1024:
-                    inference_img = image.copy()
-                    inference_img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
+                import torch
+                import gc
 
-                # Run Depth Anything V2 model inference
-                output = pipe(inference_img)
+                # Native Depth Anything V2 canonical input resolution is 518x518.
+                # Scaling to 518x518 prevents OOM on free-tier 512MB RAM containers
+                # while preserving maximum model fidelity and responsiveness.
+                inference_img = image.copy()
+                if max(orig_w, orig_h) > 518:
+                    inference_img.thumbnail((518, 518), Image.Resampling.LANCZOS)
+
+                # Run inference with zero gradient tracking for minimal RAM usage
+                with torch.inference_mode():
+                    output = pipe(inference_img)
                 depth_output = output["depth"] # PIL Image
                 
                 # Resize back to exact original image dimensions
@@ -92,6 +98,10 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                     depth_output = depth_output.resize((orig_w, orig_h), Image.Resampling.BICUBIC)
 
                 depth_arr = np.array(depth_output, dtype=np.float32)
+
+                # Force memory cleanup
+                del output
+                gc.collect()
 
                 # Robust min-max normalization
                 d_min = float(np.min(depth_arr))
