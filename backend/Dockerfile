@@ -30,6 +30,9 @@ RUN python -m app.utils.generate_demos
 # Create upload and output directories
 RUN mkdir -p uploads outputs models demo_assets
 
-EXPOSE 8000
+ENV PORT=8000
+ENV PYTHONUNBUFFERED=1
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE 8000 10000 7860
+
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

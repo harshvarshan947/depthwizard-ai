@@ -9,6 +9,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { HeightLegend } from '../components/common/HeightLegend';
 import { CalibrationPanel } from '../components/common/CalibrationPanel';
+import { resolveApiUrl } from '../services/api';
 
 export const HeightPage: React.FC = () => {
   const { currentResult, calibration } = useApp();
@@ -123,7 +124,7 @@ export const HeightPage: React.FC = () => {
 
           <div className="flex-1 min-h-[360px] bg-black rounded-xl overflow-hidden flex items-center justify-center border border-slate-800">
             <img
-              src={heightData?.colorized_height_url || '/demo_assets/demo_urban_commercial.png'}
+              src={resolveApiUrl(heightData?.colorized_height_url || '/demo_assets/demo_urban_commercial.png')}
               alt="Height Heatmap"
               className="max-h-[420px] max-w-full object-contain"
             />

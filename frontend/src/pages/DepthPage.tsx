@@ -4,7 +4,7 @@ import {
   ArrowRight, ShieldCheck, AlertCircle 
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { api } from '../services/api';
+import { api, resolveApiUrl } from '../services/api';
 
 export const DepthPage: React.FC = () => {
   const { 
@@ -85,7 +85,7 @@ export const DepthPage: React.FC = () => {
           </div>
           <div className="flex-1 min-h-[380px] bg-black rounded-xl overflow-hidden flex items-center justify-center border border-slate-800">
             <img
-              src={currentResult?.image_url || '/demo_assets/demo_urban_commercial.png'}
+              src={resolveApiUrl(currentResult?.image_url || '/demo_assets/demo_urban_commercial.png')}
               alt="Original Aerial"
               className="max-h-[440px] max-w-full object-contain"
             />
@@ -107,7 +107,7 @@ export const DepthPage: React.FC = () => {
           </div>
           <div className="flex-1 min-h-[380px] bg-black rounded-xl overflow-hidden flex items-center justify-center border border-cyan-500/30 shadow-glow-cyan">
             <img
-              src={currentResult?.depth?.colorized_depth_url || '/demo_assets/demo_urban_commercial.png'}
+              src={resolveApiUrl(currentResult?.depth?.colorized_depth_url || '/demo_assets/demo_urban_commercial.png')}
               alt="Colorized Depth Map"
               className="max-h-[440px] max-w-full object-contain"
             />

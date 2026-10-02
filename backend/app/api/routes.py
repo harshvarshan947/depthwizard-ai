@@ -2,6 +2,7 @@ import os
 import uuid
 import time
 import shutil
+from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from PIL import Image
@@ -159,30 +160,20 @@ def reconstruct_mesh_endpoint(req: MeshReconstructRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"3D Reconstruction failed: {str(e)}")
 
-@router.post("/process", response_model=PipelineProcessResponse)
-def run_full_pipeline(
-    image_id: str = Form(...),
-    contrast: float = Form(1.0),
-    scale: float = Form(1.0),
-    invert: bool = Form(False),
-    colormap: str = Form("turbo"),
-    use_ai: bool = Form(True),
-    is_calibrated: bool = Form(False),
-    camera_altitude_m: float = Form(500.0),
-    ground_sampling_distance_cm: float = Form(15.0),
-    reference_height_m: float = Form(None),
-    exaggeration: float = Form(1.0)
-):
-    """
-    Executes the 7-step presentation pipeline in a single synchronized call:
-    STEP 01 Image Preprocessing
-    STEP 02 AI Depth Estimation
-    STEP 03 Depth Normalization
-    STEP 04 Height Reconstruction
-    STEP 05 Object Analysis
-    STEP 06 3D Mesh Generation
-    STEP 07 Scene Optimization
-    """
+def execute_pipeline(
+    image_id: str,
+    contrast: float = 1.0,
+    scale: float = 1.0,
+    invert: bool = False,
+    colormap: str = "turbo",
+    use_ai: bool = True,
+    is_calibrated: bool = False,
+    camera_altitude_m: float = 500.0,
+    ground_sampling_distance_cm: float = 15.0,
+    reference_height_m: Optional[float] = None,
+    exaggeration: float = 1.0
+) -> PipelineProcessResponse:
+    """Core 7-step pipeline executor, callable directly by Python or via HTTP."""
     t0 = time.time()
     
     # 1. Resolve image source
@@ -258,6 +249,44 @@ def run_full_pipeline(
     
     return response_payload
 
+@router.post("/process", response_model=PipelineProcessResponse)
+def run_full_pipeline(
+    image_id: str = Form(...),
+    contrast: float = Form(1.0),
+    scale: float = Form(1.0),
+    invert: bool = Form(False),
+    colormap: str = Form("turbo"),
+    use_ai: bool = Form(True),
+    is_calibrated: bool = Form(False),
+    camera_altitude_m: float = Form(500.0),
+    ground_sampling_distance_cm: float = Form(15.0),
+    reference_height_m: Optional[float] = Form(None),
+    exaggeration: float = Form(1.0)
+):
+    """
+    Executes the 7-step presentation pipeline in a single synchronized call:
+    STEP 01 Image Preprocessing
+    STEP 02 AI Depth Estimation
+    STEP 03 Depth Normalization
+    STEP 04 Height Reconstruction
+    STEP 05 Object Analysis
+    STEP 06 3D Mesh Generation
+    STEP 07 Scene Optimization
+    """
+    return execute_pipeline(
+        image_id=image_id,
+        contrast=contrast,
+        scale=scale,
+        invert=invert,
+        colormap=colormap,
+        use_ai=use_ai,
+        is_calibrated=is_calibrated,
+        camera_altitude_m=camera_altitude_m,
+        ground_sampling_distance_cm=ground_sampling_distance_cm,
+        reference_height_m=reference_height_m,
+        exaggeration=exaggeration
+    )
+
 @router.get("/result/{image_id}")
 def get_cached_result(image_id: str):
     if image_id in _CACHE_RESULTS:
@@ -307,7 +336,7 @@ def export_asset(image_id: str, format: str):
             return JSONResponse(content=_CACHE_RESULTS[image_id])
         path = os.path.join(OUTPUT_DIR, f"{image_id}_depth_raw.npy")
         if os.path.exists(path):
-            res = run_full_pipeline(image_id=image_id)
+            res = execute_pipeline(image_id=image_id)
             return JSONResponse(content=res.model_dump())
         raise HTTPException(status_code=404, detail="JSON result not available.")
     else:

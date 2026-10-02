@@ -4,7 +4,7 @@ import {
   Layers, Mountain, Target, Grid as GridIcon, Sliders, Info 
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { api } from '../services/api';
+import { api, resolveApiUrl } from '../services/api';
 import { DemoPreset, ObjectItem } from '../types';
 
 export const UploadPage: React.FC = () => {
@@ -187,7 +187,7 @@ export const UploadPage: React.FC = () => {
                   className="p-2.5 rounded-lg border border-slate-800 hover:border-cyan-400/50 bg-slate-950/60 hover:bg-cyan-950/20 cursor-pointer transition flex items-center space-x-3 group"
                 >
                   <img
-                    src={d.thumbnail_url}
+                    src={resolveApiUrl(d.thumbnail_url)}
                     alt={d.title}
                     className="w-12 h-12 rounded object-cover border border-slate-700 group-hover:border-cyan-400 transition"
                   />
@@ -278,7 +278,7 @@ export const UploadPage: React.FC = () => {
             
             {/* Base RGB Image */}
             <img
-              src={filePreview || currentResult?.image_url || '/demo_assets/demo_urban_commercial.png'}
+              src={filePreview || resolveApiUrl(currentResult?.image_url || '/demo_assets/demo_urban_commercial.png')}
               alt="Satellite Base Layer"
               className="max-h-[520px] max-w-full object-contain select-none"
             />
@@ -286,7 +286,7 @@ export const UploadPage: React.FC = () => {
             {/* Depth Map Overlay */}
             {overlayMode === 'depth' && currentResult && (
               <img
-                src={currentResult.depth.colorized_depth_url}
+                src={resolveApiUrl(currentResult.depth.colorized_depth_url)}
                 alt="Depth Overlay"
                 style={{ opacity: overlayOpacity }}
                 className="absolute inset-0 m-auto max-h-[520px] max-w-full object-contain pointer-events-none transition-opacity"
@@ -296,7 +296,7 @@ export const UploadPage: React.FC = () => {
             {/* Height Map Overlay */}
             {overlayMode === 'height' && currentResult && (
               <img
-                src={currentResult.height.colorized_height_url}
+                src={resolveApiUrl(currentResult.height.colorized_height_url)}
                 alt="Height Overlay"
                 style={{ opacity: overlayOpacity }}
                 className="absolute inset-0 m-auto max-h-[520px] max-w-full object-contain pointer-events-none transition-opacity"

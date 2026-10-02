@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { ThreeDViewport } from '../3d/ThreeDViewport';
+import { resolveApiUrl } from '../../services/api';
 
 export const PresentationMode: React.FC = () => {
   const { 
@@ -228,7 +229,7 @@ export const PresentationMode: React.FC = () => {
               {/* Left 8 Cols: Large High-Resolution Aerial View */}
               <div className="lg:col-span-8 h-full max-h-[62vh] rounded-2xl overflow-hidden border-2 border-cyan-500/40 shadow-2xl bg-black flex items-center justify-center relative">
                 <img
-                  src={result?.image_url || '/demo_assets/demo_urban_commercial.png'}
+                  src={resolveApiUrl(result?.image_url || '/demo_assets/demo_urban_commercial.png')}
                   alt="Source Aerial"
                   className="w-full h-full object-contain"
                 />
@@ -317,7 +318,7 @@ export const PresentationMode: React.FC = () => {
                 </div>
                 <div className="w-full flex-1 rounded-2xl overflow-hidden border border-slate-800 bg-black flex items-center justify-center shadow-lg">
                   <img
-                    src={result?.image_url || '/demo_assets/demo_urban_commercial.png'}
+                    src={resolveApiUrl(result?.image_url || '/demo_assets/demo_urban_commercial.png')}
                     alt="Original"
                     className="w-full h-full object-contain"
                   />
@@ -355,11 +356,11 @@ export const PresentationMode: React.FC = () => {
                 </div>
                 <div className="w-full flex-1 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-black flex items-center justify-center shadow-glow-cyan">
                   <img
-                    src={
+                    src={resolveApiUrl(
                       depthViewMode === 'color'
                         ? (result?.depth?.colorized_depth_url || '/demo_assets/demo_urban_commercial_height_color.png')
                         : (result?.depth?.normalized_depth_url || '/demo_assets/demo_urban_commercial_depth_norm.png')
-                    }
+                    )}
                     alt="Depth Prediction"
                     className="w-full h-full object-contain"
                   />
@@ -421,7 +422,7 @@ export const PresentationMode: React.FC = () => {
               {/* Left 8 Cols: Height Field Heatmap with Hypsometric Color Legend */}
               <div className="lg:col-span-8 h-full max-h-[62vh] rounded-2xl overflow-hidden border-2 border-emerald-500/40 bg-black flex items-center justify-center relative shadow-2xl">
                 <img
-                  src={result?.height?.colorized_height_url || '/demo_assets/demo_urban_commercial_height_color.png'}
+                  src={resolveApiUrl(result?.height?.colorized_height_url || '/demo_assets/demo_urban_commercial_height_color.png')}
                   alt="Hypsometric Height Map"
                   className="w-full h-full object-contain"
                 />

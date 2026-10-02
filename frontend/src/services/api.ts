@@ -1,6 +1,21 @@
 import { SystemHealth, DemoPreset, PipelineResult, DepthResponse, HeightResponse, ObjectAnalysisResponse, MeshReconstructResponse } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_URL || '';
+export const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+export const resolveApiUrl = (path?: string | null): string => {
+  if (!path) return '';
+  if (
+    path.startsWith('http://') || 
+    path.startsWith('https://') || 
+    path.startsWith('data:') || 
+    path.startsWith('blob:')
+  ) {
+    return path;
+  }
+  if (!BASE_URL) return path;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${BASE_URL}${cleanPath}`;
+};
 
 export const api = {
   async getHealth(): Promise<SystemHealth> {

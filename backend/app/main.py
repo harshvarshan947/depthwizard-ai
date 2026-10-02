@@ -40,14 +40,34 @@ app = FastAPI(
     version="2.4.0"
 )
 
-# CORS configuration for full cross-origin local, LAN, and cloud domain access
+# CORS configuration supporting Vercel, Render, local dev, and custom domains
+cors_origins_env = os.environ.get("ALLOWED_ORIGINS", "")
+allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] if cors_origins_env else []
+
+if not allowed_origins:
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app|https://.*\.onrender\.com|https://.*\.hf\.space|http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+@app.get("/health")
+def root_health():
+    """Top-level health check endpoint mirroring /api/health."""
+    from app.api.routes import get_health
+    return get_health()
 
 # Static file mounts
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")

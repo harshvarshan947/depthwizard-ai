@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { useApp } from '../../context/AppContext';
+import { resolveApiUrl } from '../../services/api';
 
 interface TerrainMeshProps {
   onPointClick?: (point: THREE.Vector3) => void;
@@ -35,10 +36,10 @@ export const TerrainMesh: React.FC<TerrainMeshProps> = ({
   const wireframeMeshRef = useRef<THREE.Mesh>(null);
   const [heightData, setHeightData] = useState<HeightFieldState | null>(null);
 
-  // Fallback textures or real result textures
-  const textureUrl = currentResult?.image_url || '/demo_assets/demo_urban_commercial.png';
-  const depthUrl = currentResult?.depth?.normalized_depth_url || '/demo_assets/demo_urban_commercial_depth_norm.png';
-  const heightColorUrl = currentResult?.height?.colorized_height_url || '/demo_assets/demo_urban_commercial_height_color.png';
+  // Fallback textures or real result textures (resolved against API base URL)
+  const textureUrl = resolveApiUrl(currentResult?.image_url || '/demo_assets/demo_urban_commercial.png');
+  const depthUrl = resolveApiUrl(currentResult?.depth?.normalized_depth_url || '/demo_assets/demo_urban_commercial_depth_norm.png');
+  const heightColorUrl = resolveApiUrl(currentResult?.height?.colorized_height_url || '/demo_assets/demo_urban_commercial_height_color.png');
 
   // Load textures using Three.js loader
   const [colorMap, elevationColormap] = useMemo(() => {

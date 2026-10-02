@@ -1,0 +1,30 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Git & IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+*.log
+
+# Ephemeral user uploads & generated 3D exports
+uploads/*
+!uploads/.gitkeep
+outputs/*
+!outputs/.gitkeep
+models/*
+!models/.gitkeep
+
+.DS_Store
+Thumbs.db
