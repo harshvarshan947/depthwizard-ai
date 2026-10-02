@@ -65,15 +65,20 @@ export const UploadPage: React.FC = () => {
   const [overlayOpacity, setOverlayOpacity] = useState<number>(0.65);
   const [showGridOverlay, setShowGridOverlay] = useState<boolean>(false);
 
+  const [lastCheckError, setLastCheckError] = useState<string>('');
+
   const checkHealth = () => {
     setBackendStatus('checking');
+    setLastCheckError('');
     api.getHealth()
       .then((health) => {
         setBackendStatus('connected');
         setBackendEngineName(health.ai_model?.engine || 'Depth Anything V2');
+        setLastCheckError('');
       })
-      .catch(() => {
+      .catch((err) => {
         setBackendStatus('disconnected');
+        setLastCheckError(err?.message || 'Connection failed or timed out');
       });
   };
 
@@ -219,15 +224,24 @@ export const UploadPage: React.FC = () => {
             </button>
           </div>
           {apiUrl && (
-            <div className="text-[11px] text-slate-500 flex items-center justify-between">
-              <span>Target URL: {apiUrl}/api/health</span>
-              <button 
-                onClick={checkHealth}
-                className="text-cyan-400 hover:underline flex items-center space-x-1"
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span>Test Connection</span>
-              </button>
+            <div className="text-[11px] text-slate-500 flex flex-col space-y-1.5 pt-1 border-t border-slate-800">
+              <div className="flex items-center justify-between">
+                <span>
+                  Target: <a href={`${apiUrl.replace(/\/+$/, '')}/api/health`} target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline font-mono">{apiUrl.replace(/\/+$/, '')}/api/health</a>
+                </span>
+                <button 
+                  onClick={checkHealth}
+                  className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center space-x-1"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Test Connection</span>
+                </button>
+              </div>
+              {lastCheckError && (
+                <div className="text-[10px] text-amber-300 bg-amber-950/40 p-2 rounded border border-amber-500/30">
+                  ⚠️ Status: {lastCheckError}. Click the link above to test if Render is still deploying or sleeping.
+                </div>
+              )}
             </div>
           )}
         </div>

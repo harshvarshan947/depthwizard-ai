@@ -1,16 +1,33 @@
 import { SystemHealth, DemoPreset, PipelineResult, DepthResponse, HeightResponse, ObjectAnalysisResponse, MeshReconstructResponse } from '../types';
 
+export const cleanApiUrl = (url: string): string => {
+  let clean = url.trim();
+  if (!clean) return '';
+  clean = clean.replace(/\/+$/, '');
+  clean = clean.replace(/\/api\/health$/, '');
+  clean = clean.replace(/\/health$/, '');
+  clean = clean.replace(/\/api$/, '');
+  if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+    if (clean.startsWith('localhost') || clean.startsWith('127.0.0.1')) {
+      clean = `http://${clean}`;
+    } else {
+      clean = `https://${clean}`;
+    }
+  }
+  return clean;
+};
+
 export const getStoredApiUrl = (): string => {
   try {
     const saved = localStorage.getItem('depthwizard_api_url');
-    if (saved && saved.trim()) return saved.trim().replace(/\/$/, '');
+    if (saved && saved.trim()) return cleanApiUrl(saved);
   } catch (e) {}
-  return (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+  return cleanApiUrl(import.meta.env.VITE_API_URL || '');
 };
 
 export const setStoredApiUrl = (url: string) => {
   try {
-    const clean = url.trim().replace(/\/$/, '');
+    const clean = cleanApiUrl(url);
     if (clean) {
       localStorage.setItem('depthwizard_api_url', clean);
     } else {
@@ -67,8 +84,8 @@ export const api = {
   async getHealth(): Promise<SystemHealth> {
     const baseUrl = getApiBaseUrl();
     const targetUrl = baseUrl ? `${baseUrl}/api/health` : '/api/health';
-    const res = await fetchWithTimeout(targetUrl, {}, 15000);
-    if (!res.ok) throw new Error('Failed to reach DepthWizard backend.');
+    const res = await fetchWithTimeout(targetUrl, {}, 45000);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
     return res.json();
   },
 
