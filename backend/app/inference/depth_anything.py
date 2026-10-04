@@ -134,42 +134,38 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
         onnx_sess = get_onnx_session()
         if onnx_sess is not None:
             try:
-                target_size = 392
+                # Native 518x518 ViT resolution (official Depth Anything V2 training resolution)
+                target_size = 518
                 img_resized = image.resize((target_size, target_size), Image.Resampling.BICUBIC)
                 arr = np.array(img_resized, dtype=np.float32) / 255.0
                 mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
                 std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
                 arr = (arr - mean) / std
                 arr = np.transpose(arr, (2, 0, 1))
-                arr = np.expand_dims(arr, axis=0)
+                arr = np.expand_dims(arr, axis=0).astype(np.float32)
 
                 inputs = onnx_sess.get_inputs()
                 raw_out = onnx_sess.run(None, {inputs[0].name: arr})[0]
-                depth_pred = raw_out[0] # (392, 392)
+                depth_pred = raw_out[0] # (518, 518)
 
                 # Resize back to exact original image dimensions
                 depth_pil = Image.fromarray(depth_pred).resize((orig_w, orig_h), Image.Resampling.BICUBIC)
                 depth_arr = np.array(depth_pil, dtype=np.float32)
 
-                # Robust percentile normalization (exclude bottom 7% to prevent Google Earth scale bars/logos from skewing range)
-                h_crop = max(int(orig_h * 0.93), 1)
+                # Robust percentile normalization (exclude bottom 9.5% for Google Earth watermark / scalebar)
+                h_crop = max(int(orig_h * 0.905), 1)
                 sample_area = depth_arr[:h_crop, :]
-                p_min = float(np.percentile(sample_area, 3))
-                p_max = float(np.percentile(sample_area, 97))
+                p_min = float(np.percentile(sample_area, 2))
+                p_max = float(np.percentile(sample_area, 98))
                 if p_max > p_min:
                     depth_norm = np.clip((depth_arr - p_min) / (p_max - p_min + 1e-6), 0.0, 1.0)
                 else:
                     depth_norm = np.clip(depth_arr / 255.0, 0.0, 1.0)
 
-                # Smoothly fade bottom watermark / scale bar area to planar ground level
-                min_ground = float(np.percentile(sample_area, 3))
+                # Seamlessly extend real satellite terrain over bottom watermark banner
                 for r in range(h_crop, orig_h):
-                    weight = (r - h_crop) / max(orig_h - h_crop, 1)
-                    depth_norm[r, :] = (1.0 - weight) * depth_norm[h_crop - 1, :] + weight * min_ground
+                    depth_norm[r, :] = depth_norm[h_crop - 1, :]
 
-                # Anti-spike Gaussian smoothing pass: suppresses high-frequency leaf noise, asphalt grain, and needle artifacts
-                depth_pil_smooth = Image.fromarray((depth_norm * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(radius=1.5))
-                depth_norm = np.array(depth_pil_smooth, dtype=np.float32) / 255.0
                 elapsed = round((time.time() - start_time) * 1000, 1)
 
                 return (
@@ -190,8 +186,8 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                 import gc
 
                 inference_img = image.copy()
-                if max(orig_w, orig_h) > 392:
-                    inference_img.thumbnail((392, 392), Image.Resampling.LANCZOS)
+                if max(orig_w, orig_h) > 518:
+                    inference_img.thumbnail((518, 518), Image.Resampling.LANCZOS)
 
                 with torch.inference_mode():
                     output = pipe(inference_img)
@@ -204,23 +200,18 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                 del output
                 gc.collect()
 
-                h_crop = max(int(orig_h * 0.93), 1)
+                h_crop = max(int(orig_h * 0.905), 1)
                 sample_area = depth_arr[:h_crop, :]
-                p_min = float(np.percentile(sample_area, 3))
-                p_max = float(np.percentile(sample_area, 97))
+                p_min = float(np.percentile(sample_area, 2))
+                p_max = float(np.percentile(sample_area, 98))
                 if p_max > p_min:
                     depth_norm = np.clip((depth_arr - p_min) / (p_max - p_min + 1e-6), 0.0, 1.0)
                 else:
                     depth_norm = np.clip(depth_arr / 255.0, 0.0, 1.0)
 
-                # Smoothly fade bottom watermark / scale bar area to planar ground level
-                min_ground = float(np.percentile(sample_area, 3))
                 for r in range(h_crop, orig_h):
-                    weight = (r - h_crop) / max(orig_h - h_crop, 1)
-                    depth_norm[r, :] = (1.0 - weight) * depth_norm[h_crop - 1, :] + weight * min_ground
+                    depth_norm[r, :] = depth_norm[h_crop - 1, :]
 
-                depth_pil = Image.fromarray((depth_norm * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(radius=1.5))
-                depth_norm = np.array(depth_pil, dtype=np.float32) / 255.0
                 elapsed = round((time.time() - start_time) * 1000, 1)
 
                 return (
