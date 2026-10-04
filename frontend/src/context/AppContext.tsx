@@ -209,6 +209,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.error('Processing error:', err);
       setIsLoading(false);
       setPipelineStatusText(`Processing Error: ${err.message}`);
+      throw err;
     }
   };
 

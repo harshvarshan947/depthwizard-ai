@@ -222,7 +222,7 @@ def execute_pipeline(
     # 5. Mesh
     mesh_res = ReconstructionService.generate_mesh(MeshReconstructRequest(
         image_id=image_id,
-        resolution_downsample=2,
+        resolution_downsample=4,
         height_exaggeration=exaggeration
     ))
     

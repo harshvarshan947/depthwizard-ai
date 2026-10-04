@@ -20,59 +20,50 @@ def compute_aerial_gradient_depth(image: Image.Image) -> np.ndarray:
     # Base array
     arr = np.array(img_gray, dtype=np.float32) / 255.0
     
-    # 1. Structural multi-scale blur
-    img_blur_sm = img_gray.filter(ImageFilter.GaussianBlur(radius=2))
-    img_blur_lg = img_gray.filter(ImageFilter.GaussianBlur(radius=8))
-    arr_sm = np.array(img_blur_sm, dtype=np.float32) / 255.0
+    # 1. Multi-scale blur to extract macro structure and suppress pixel-level noise
+    img_blur_md = img_gray.filter(ImageFilter.GaussianBlur(radius=4))
+    img_blur_lg = img_gray.filter(ImageFilter.GaussianBlur(radius=12))
+    arr_md = np.array(img_blur_md, dtype=np.float32) / 255.0
     arr_lg = np.array(img_blur_lg, dtype=np.float32) / 255.0
-    
-    # Local variance / texture energy (buildings have distinct local texture/rooftops)
-    local_detail = np.abs(arr - arr_sm)
-    macro_structure = np.abs(arr_sm - arr_lg)
-    
-    # 2. Edge gradients (Sobel approximation)
-    gy, gx = np.gradient(arr_sm)
-    grad_mag = np.sqrt(gx**2 + gy**2)
-    grad_norm = grad_mag / (np.max(grad_mag) + 1e-6)
-    
-    # 3. Shadow & Roof separation:
-    # In aerial views, shadows are very dark (arr < 0.25) and lie next to tall structures.
-    # Rooftops are often brighter or uniform.
-    shadow_mask = (arr < 0.22).astype(np.float32)
-    roof_candidate = (arr > 0.35).astype(np.float32)
-    
-    # Shift shadow mask slightly to attribute height to adjacent caster
-    # E.g. typical solar azimuth ~45 deg
-    shadow_caster_weight = np.roll(shadow_mask, shift=(-3, -3), axis=(0, 1))
-    
-    # 4. Integrate elevation cues
-    # Base elevation field: gentle gradient across terrain + macro structures
+
+    # Macro structural difference (solid building footprints, not 1px razor edges)
+    macro_structure = np.clip((arr_md - arr_lg) * 2.5, 0.0, 1.0)
+    macro_img = Image.fromarray((macro_structure * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(radius=3))
+    macro_smooth = np.array(macro_img, dtype=np.float32) / 255.0
+
+    # 2. Shadow & Roof separation:
+    shadow_mask = (arr_md < 0.22).astype(np.float32)
+    roof_candidate = (arr_md > 0.35).astype(np.float32) * arr_md
+    shadow_caster_weight = np.roll(shadow_mask, shift=(-4, -4), axis=(0, 1))
+
+    # 3. Base elevation field
     y_coords, x_coords = np.mgrid[0:h, 0:w]
-    terrain_tilt = 0.08 * (y_coords / float(h)) + 0.05 * (x_coords / float(w))
-    
-    # Combine signals
-    raw_depth = (
-        0.30 * arr +                          # Rooftop brightness / reflectance
-        0.25 * macro_structure * 3.0 +        # Structure contrast
-        0.20 * grad_norm * 2.0 +              # Building boundaries
-        0.15 * (roof_candidate * shadow_caster_weight) + # Shadow caster height boost
-        terrain_tilt                          # Ground slope
+    terrain_tilt = 0.04 * (y_coords / float(h)) + 0.03 * (x_coords / float(w))
+
+    # 4. Combine signals with smooth plateau weighting (no raw edge spikes)
+    combined = (
+        0.45 * arr_md +
+        0.30 * macro_smooth +
+        0.15 * (roof_candidate * shadow_caster_weight) +
+        terrain_tilt
     )
-    
-    # 5. Clean up with morphological leveling / bilateral smoothing simulation
-    # Clip and normalize
-    raw_depth = np.clip(raw_depth, 0.0, None)
-    d_min = np.percentile(raw_depth, 2)
-    d_max = np.percentile(raw_depth, 98)
-    if d_max > d_min:
-        depth_norm = (raw_depth - d_min) / (d_max - d_min)
+
+    # 5. Heavy spatial Gaussian smoothing to guarantee solid, non-spiky plateaus
+    smooth_img = Image.fromarray((combined * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(radius=3.5))
+    raw_depth = np.array(smooth_img, dtype=np.float32) / 255.0
+
+    # 6. Robust percentile normalization (ignore UI banner in bottom 8%)
+    h_crop = max(int(h * 0.92), 1)
+    sample_area = raw_depth[:h_crop, :]
+    p15 = float(np.percentile(sample_area, 15))
+    p95 = float(np.percentile(sample_area, 95))
+    if p95 > p15:
+        depth_norm = np.clip((raw_depth - p15) / (p95 - p15 + 1e-6), 0.0, 1.0)
     else:
-        depth_norm = raw_depth
-        
-    depth_norm = np.clip(depth_norm, 0.0, 1.0)
-    
-    # Apply soft non-linear contrast curve to enhance building plateaus
-    depth_final = np.power(depth_norm, 1.2)
+        depth_norm = np.clip(raw_depth, 0.0, 1.0)
+
+    # Soft plateau power curve
+    depth_final = np.power(depth_norm, 1.1)
     return depth_final.astype(np.float32)
 
 def generate_procedural_aerial_demo(scenario: str = "urban_commercial", width: int = 768, height: int = 768):

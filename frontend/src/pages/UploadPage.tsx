@@ -100,6 +100,7 @@ export const UploadPage: React.FC = () => {
   const handleFileSelect = (file: File) => {
     setUploadError(null);
     setSelectedFile(file);
+    setOverlayMode('none');
     const url = URL.createObjectURL(file);
     setFilePreview(url);
 

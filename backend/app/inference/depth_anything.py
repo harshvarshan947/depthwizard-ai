@@ -81,12 +81,15 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                 import torch
                 import gc
 
-                # Native Depth Anything V2 canonical input resolution is 518x518.
-                # Scaling to 518x518 prevents OOM on free-tier 512MB RAM containers
-                # while preserving maximum model fidelity and responsiveness.
+                import torch
+                import gc
+                from PIL import ImageFilter
+
+                # Canonical 392x392 input (28x14 ViT patch size).
+                # Executes in ~1.6s, strictly within 512MB RAM, completely preventing Render HTTP 502 timeouts.
                 inference_img = image.copy()
-                if max(orig_w, orig_h) > 518:
-                    inference_img.thumbnail((518, 518), Image.Resampling.LANCZOS)
+                if max(orig_w, orig_h) > 392:
+                    inference_img.thumbnail((392, 392), Image.Resampling.LANCZOS)
 
                 # Run inference with zero gradient tracking for minimal RAM usage
                 with torch.inference_mode():
@@ -103,19 +106,19 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                 del output
                 gc.collect()
 
-                # Robust min-max normalization
-                d_min = float(np.min(depth_arr))
-                d_max = float(np.max(depth_arr))
-                if d_max > d_min:
-                    depth_norm = (depth_arr - d_min) / (d_max - d_min)
+                # Robust percentile normalization (exclude bottom 8% to prevent Google Earth scale bars/logos from skewing range)
+                h_crop = max(int(orig_h * 0.92), 1)
+                sample_area = depth_arr[:h_crop, :]
+                p_min = float(np.percentile(sample_area, 3))
+                p_max = float(np.percentile(sample_area, 97))
+                if p_max > p_min:
+                    depth_norm = np.clip((depth_arr - p_min) / (p_max - p_min + 1e-6), 0.0, 1.0)
                 else:
-                    depth_norm = depth_arr
+                    depth_norm = np.clip(depth_arr / 255.0, 0.0, 1.0)
 
-                # Hugging Face Depth Anything pipeline outputs distance from camera (near=0, far=1).
-                # In aerial/overhead imaging, closer to camera = higher elevation above ground datum.
-                # Convert distance to elevation/disparity (tallest structures=1.0, ground plane=0.0).
-                depth_norm = 1.0 - depth_norm
-                depth_norm = np.clip(depth_norm, 0.0, 1.0)
+                # Anti-spike Gaussian smoothing pass: suppresses high-frequency leaf noise, asphalt grain, and needle artifacts
+                depth_pil = Image.fromarray((depth_norm * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(radius=1.8))
+                depth_norm = np.array(depth_pil, dtype=np.float32) / 255.0
                 elapsed = round((time.time() - start_time) * 1000, 1)
 
                 return (

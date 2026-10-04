@@ -98,7 +98,28 @@ export const TerrainMesh: React.FC<TerrainMeshProps> = ({
         }
       }
 
-      setHeightData({ elevations, gridX, gridY, aspect });
+      // 3x3 spatial smoothing filter to eliminate high-frequency needle spikes and raster noise
+      const smoothed = new Float32Array(totalVertices);
+      for (let r = 0; r <= gridY; r++) {
+        for (let c = 0; c <= gridX; c++) {
+          let sum = 0;
+          let count = 0;
+          for (let dr = -1; dr <= 1; dr++) {
+            const nr = r + dr;
+            if (nr < 0 || nr > gridY) continue;
+            for (let dc = -1; dc <= 1; dc++) {
+              const nc = c + dc;
+              if (nc < 0 || nc > gridX) continue;
+              const weight = (dr === 0 && dc === 0) ? 4 : (dr === 0 || dc === 0) ? 2 : 1;
+              sum += elevations[nr * (gridX + 1) + nc] * weight;
+              count += weight;
+            }
+          }
+          smoothed[r * (gridX + 1) + c] = sum / count;
+        }
+      }
+
+      setHeightData({ elevations: smoothed, gridX, gridY, aspect });
     };
 
     img.onerror = (e) => {
