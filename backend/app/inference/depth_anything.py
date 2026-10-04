@@ -161,9 +161,11 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                 else:
                     depth_norm = np.clip(depth_arr / 255.0, 0.0, 1.0)
 
-                # Replicate ground plane over bottom watermark / scale bar area
+                # Smoothly fade bottom watermark / scale bar area to planar ground level
+                min_ground = float(np.percentile(sample_area, 3))
                 for r in range(h_crop, orig_h):
-                    depth_norm[r, :] = depth_norm[h_crop - 1, :]
+                    weight = (r - h_crop) / max(orig_h - h_crop, 1)
+                    depth_norm[r, :] = (1.0 - weight) * depth_norm[h_crop - 1, :] + weight * min_ground
 
                 # Anti-spike Gaussian smoothing pass: suppresses high-frequency leaf noise, asphalt grain, and needle artifacts
                 depth_pil_smooth = Image.fromarray((depth_norm * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(radius=1.5))
@@ -211,8 +213,11 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                 else:
                     depth_norm = np.clip(depth_arr / 255.0, 0.0, 1.0)
 
+                # Smoothly fade bottom watermark / scale bar area to planar ground level
+                min_ground = float(np.percentile(sample_area, 3))
                 for r in range(h_crop, orig_h):
-                    depth_norm[r, :] = depth_norm[h_crop - 1, :]
+                    weight = (r - h_crop) / max(orig_h - h_crop, 1)
+                    depth_norm[r, :] = (1.0 - weight) * depth_norm[h_crop - 1, :] + weight * min_ground
 
                 depth_pil = Image.fromarray((depth_norm * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(radius=1.5))
                 depth_norm = np.array(depth_pil, dtype=np.float32) / 255.0
