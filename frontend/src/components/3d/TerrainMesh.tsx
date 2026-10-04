@@ -68,9 +68,9 @@ export const TerrainMesh: React.FC<TerrainMeshProps> = ({
 
     img.onload = () => {
       if (isCancelled) return;
-      const gridX = 200;
+      const gridX = 160;
       const aspect = img.height > 0 ? img.height / img.width : 1.0;
-      const gridY = Math.max(32, Math.min(240, Math.round(200 * aspect)));
+      const gridY = Math.max(32, Math.min(192, Math.round(160 * aspect)));
 
       const canvas = document.createElement('canvas');
       canvas.width = gridX + 1;

@@ -152,28 +152,23 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                 depth_pil = Image.fromarray(depth_pred).resize((orig_w, orig_h), Image.Resampling.BICUBIC)
                 depth_arr = np.array(depth_pil, dtype=np.float32)
 
-                # Robust percentile normalization (exclude bottom 9.5% for Google Earth watermark / scalebar)
-                h_crop = max(int(orig_h * 0.905), 1)
-                sample_area = depth_arr[:h_crop, :]
-                p_min = float(np.percentile(sample_area, 2))
-                p_max = float(np.percentile(sample_area, 98))
-                if p_max > p_min:
-                    depth_norm = np.clip((depth_arr - p_min) / (p_max - p_min + 1e-6), 0.0, 1.0)
+                # Robust min-max normalization (exact first trial formulation)
+                d_min = float(np.min(depth_arr))
+                d_max = float(np.max(depth_arr))
+                if d_max > d_min:
+                    depth_norm = (depth_arr - d_min) / (d_max - d_min)
                 else:
-                    depth_norm = np.clip(depth_arr / 255.0, 0.0, 1.0)
+                    depth_norm = depth_arr
 
-                # Seamlessly extend real satellite terrain over bottom watermark banner
-                for r in range(h_crop, orig_h):
-                    depth_norm[r, :] = depth_norm[h_crop - 1, :]
-
+                depth_norm = np.clip(depth_norm, 0.0, 1.0)
                 elapsed = round((time.time() - start_time) * 1000, 1)
 
                 return (
                     depth_norm.astype(np.float32),
                     "Depth Anything V2 (ViT-Small)",
-                    0.98,
+                    0.96,
                     False,
-                    f"Live Depth Anything V2 neural inference completed in {elapsed} ms."
+                    f"Live Depth Anything V2 neural network inference completed in {elapsed} ms."
                 )
             except Exception as e:
                 print(f"[DepthWizard AI] Error during ONNX inference: {e}")
@@ -186,8 +181,8 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                 import gc
 
                 inference_img = image.copy()
-                if max(orig_w, orig_h) > 518:
-                    inference_img.thumbnail((518, 518), Image.Resampling.LANCZOS)
+                if max(orig_w, orig_h) > 1024:
+                    inference_img.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
 
                 with torch.inference_mode():
                     output = pipe(inference_img)
@@ -200,17 +195,14 @@ def estimate_depth(image: Image.Image, use_ai: bool = True) -> Tuple[np.ndarray,
                 del output
                 gc.collect()
 
-                h_crop = max(int(orig_h * 0.905), 1)
-                sample_area = depth_arr[:h_crop, :]
-                p_min = float(np.percentile(sample_area, 2))
-                p_max = float(np.percentile(sample_area, 98))
-                if p_max > p_min:
-                    depth_norm = np.clip((depth_arr - p_min) / (p_max - p_min + 1e-6), 0.0, 1.0)
+                d_min = float(np.min(depth_arr))
+                d_max = float(np.max(depth_arr))
+                if d_max > d_min:
+                    depth_norm = (depth_arr - d_min) / (d_max - d_min)
                 else:
-                    depth_norm = np.clip(depth_arr / 255.0, 0.0, 1.0)
+                    depth_norm = depth_arr
 
-                for r in range(h_crop, orig_h):
-                    depth_norm[r, :] = depth_norm[h_crop - 1, :]
+                depth_norm = np.clip(depth_norm, 0.0, 1.0)
 
                 elapsed = round((time.time() - start_time) * 1000, 1)
 
