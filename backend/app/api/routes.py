@@ -180,6 +180,9 @@ def execute_pipeline(
     img_path = os.path.join(UPLOAD_DIR, f"{image_id}.png")
     img_url = f"/uploads/{image_id}.png"
     if not os.path.exists(img_path):
+        img_path = os.path.join(UPLOAD_DIR, f"{image_id}.jpg")
+        img_url = f"/uploads/{image_id}.jpg"
+    if not os.path.exists(img_path):
         demo_path = os.path.join(DEMO_DIR, f"{image_id}.png")
         if os.path.exists(demo_path):
             img_path = demo_path
