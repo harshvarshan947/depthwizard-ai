@@ -79,7 +79,7 @@ export const SettingsPage: React.FC = () => {
                   type="text"
                   value={apiUrl}
                   onChange={(e) => setApiUrl(e.target.value)}
-                  placeholder="https://depthwizard-api.onrender.com"
+                  placeholder="https://depthwizard-ai.onrender.com"
                   className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-400"
                 />
                 <button
